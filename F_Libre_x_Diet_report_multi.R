@@ -7,8 +7,9 @@
 ## . EndDate : YYYY-MM-DD
 ## . inFileName : 리브레뷰에서 다운받은 혈당 데이터 파일명 (홍길동_glucose_2020-8-5.csv) 
 ## . method : 식후혈당분석방법 TargetValue IncValue Spike
+## . path0 : 결과저장 directory
 ## ---------------------------------------
-## ver ( 1.0 230824 )
+## ver ( 1.1 240329 )
 
 Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileName, method, path0, memberKey, memberKeyId ) {
 	
@@ -55,8 +56,7 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 	showtext_auto()
 
 	# style 설정 # 
-	source('S_Dietreport.R')
-#	source('S_reportStyle_onW.R')
+	source('S_Libre_x_Diet_report.R')
 
 	if ( Target=='DIET' ) {
 		Target.text = '다이어트(일반인)'
@@ -68,39 +68,74 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 		TAR_lev2.Goal = 0; TAR_lev1.Goal = 6; TBR_lev1.Goal=4; TBR_lev2.Goal = 0 
 	}
 
-	### read Source 
-	userDB = try(fromJSON(inFileName),silent=T)
-	if ( class(userDB)=='try-error' ) {
-		errCode = c(errCode,'01400')
-		break
-	}
-
-	if ( (memberKeyId %in% userDB$email)==F ) {
-		break # 리브레 없음
-	}
-	u = grep(memberKeyId,userDB$email)
-
-
 	### step1 =============================================================================##
 	### 데이터전처리
-	AGPdata = try(LibreCrawling_preprocessing(data=userDB[u,],FinalDate=EndDate),silent=T)
-	# 에러 확인용 ***************************************************************************
-	if ( class(AGPdata)=='try-error' ) {
-		errCode = c(errCode,'11900')
-		break
-	} else {
-		errCode = c(errCode,AGPdata$errCode.sub)
-		mod = AGPdata$mod
-		CGMactive = AGPdata$CGMactive #/96(%) #todo 
-#		AGPdata = AGPdata$AGPdata[which(AGPdata$AGPdata$sub<=mod),]
-		AGPdata = AGPdata$AGPdata[!is.na(AGPdata$AGPdata$sub),]
+
+	if ( any(grepl('.csv',inFileName)) ) {
+		
+		## find data 
+		num = 1 
+		while( 1 ) {
+			userInfo = try(read.table(paste('C:/Users/User/Documents/A_리브레/2_결과지알고리즘/9_혈당데이터/',inFileName[num],sep=''),col.names=1:2,flush=T,nrow=2,sep=',',fileEncoding='UTF-8'),silent=T)
+			if ( class(userInfo)=='try-error' ) {
+
+			}
+			userName = paste(strsplit(userInfo[2,1],' ')[[1]][2],strsplit(userInfo[2,1],' ')[[1]][1],sep='')
+			if ( memberKey == userName ) {
+				break
+			}
+			num = num+1
+		}
+
+		## data preprocessing
+		AGPdata = try(LibreCSV_preprocessing(inFileName1=paste('C:/Users/User/Documents/A_리브레/2_결과지알고리즘/9_혈당데이터/',inFileName[num],sep=''),FinalDate=EndDate,maxmod=2),silent=T)
+		# 에러 확인용 ***************************************************************************
+		if ( class(AGPdata)=='try-error' ) {
+			errCode = c(errCode,'11900')
+			break
+		} else {
+			errCode = c(errCode,AGPdata$errCode.sub)
+			mod = AGPdata$mod
+			CGMactive = AGPdata$CGMactive #/96(%) #todo 
+	#		AGPdata = AGPdata$AGPdata[which(AGPdata$AGPdata$sub<=mod),]
+			AGPdata = AGPdata$AGPdata[!is.na(AGPdata$AGPdata$sub),]
+		}
+
+	} else if ( any(grepl('.json',inFileName)) ) {
+
+		## find data
+		userDB = try(fromJSON(inFileName),silent=T)
+		if ( class(userDB)=='try-error' ) {
+			errCode = c(errCode,'01400')
+			break
+		}
+
+		if ( (memberKeyId %in% userDB$email)==F ) {
+			break # 리브레 없음
+		}
+		u = grep(memberKeyId,userDB$email)
+
+		## data preprocessing
+		AGPdata = try(LibreCrawling_preprocessing(data=userDB[u,],FinalDate=EndDate,maxmod=2),silent=T)
+		# 에러 확인용 ***************************************************************************
+		if ( class(AGPdata)=='try-error' ) {
+			errCode = c(errCode,'11900')
+			break
+		} else {
+			errCode = c(errCode,AGPdata$errCode.sub)
+			mod = AGPdata$mod
+			CGMactive = AGPdata$CGMactive #/96(%) #todo 
+#			AGPdata = AGPdata$AGPdata[which(AGPdata$AGPdata$sub<=mod),]
+			AGPdata = AGPdata$AGPdata[!is.na(AGPdata$AGPdata$sub),]
+		}
+
 	}
 
 
 	### step2 =============================================================================##
 	### 다이어트용 혈당스파이크 찾기
 	if ( method=='Spike' ) {
-		SPIKEdata.tmp = try(GlucoseSpike_DIET3(daysAZ=unique(AGPdata$date),data=AGPdata,baseGlu=NA,IncCut=IncCut),silent=T)
+		SPIKEdata.tmp = try(GlucoseSpike_onDIET(daysAZ=unique(AGPdata$date),data=AGPdata,baseGlu=NA,IncCut=IncCut),silent=T)
 		if ( class(SPIKEdata.tmp)=='try-error' ) {
 			errCode = c(errCode,'21900')
 			break

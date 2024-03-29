@@ -10,13 +10,13 @@
 ## ---------------------------------------
 ## ver 3.0 ( 220502 ) 
 
-LibreData_transformation = function( inFileName, FinalDate ) {
+LibreCSV_preprocessing = function( inFileName1, FinalDate, maxmod ) {
 	errCode.sub = c()
 
 	### step0 =============================================================================##
 	## 데이터 불러오기    
 
-	lines = readLines(inFileName,encoding='UTF-8')[-c(1:2)]
+	lines = readLines(inFileName1,encoding='UTF-8')[-c(1:2)]
     lIDX = grep('FreeStyle LibreLink',lines)
     data = matrix(NA, nrow=length(lIDX),ncol=19)
 
@@ -186,14 +186,12 @@ LibreData_transformation = function( inFileName, FinalDate ) {
 	AGPdata$glucose = as.numeric(as.vector(AGPdata$glucose))
 
 
-	### output =============================================================================##
-#	out.sub = 1 # ver1.0 #
-
+	## 3일미만 기간데이터 삭제 ## 
 	mod.ndays = tapply(AGPdata$date,AGPdata$sub,function(x){length(c(min(x,na.rm=T):max(x,na.rm=T)))})
 	
-	if ( any(mod.ndays>3) ) {
+	if ( any(mod.ndays>=1) ) {
 		## 
-		RM.Sub = as.numeric(names(which(mod.ndays<3)))
+		RM.Sub = as.numeric(names(which(mod.ndays<1)))
 		AGPdata$sub[which(AGPdata$sub%in%RM.Sub)] = NA
 		NEW.Sub = unique(AGPdata$sub[!is.na(AGPdata$sub)])
 
@@ -214,19 +212,55 @@ LibreData_transformation = function( inFileName, FinalDate ) {
 
 	}
 
+
+	### step3 =============================================================================##
+	## 누락시점 확인
+	## %시간활성화비율
+	AGPdata$time96 = NA
+
+	subN = ifelse(mod==1,1,max(AGPdata$sub,na.rm=T))
+	daysAZ.seq = vector('list',subN)
+	CGMactive = c()
+	dnum = 1
+	for ( k in 1:subN ) {
+		daysAZ.seq = seq.Date(range(AGPdata[which(AGPdata$sub==k),]$date)[1],range(AGPdata[which(AGPdata$sub==k),]$date)[2],1)
+		for ( d in 1:length(daysAZ.seq) ) {
+			alltimecut = seq.POSIXt(as.POSIXct(strptime(paste(daysAZ.seq[d],'00:00:00'),format='%Y-%m-%d %H:%M:%S',tz='GMT')),as.POSIXct(strptime(paste(daysAZ.seq[d]+1,'00:00:00'),format='%Y-%m-%d %H:%M:%S',tz='GMT')), by='15 min')
+
+			for ( i in which(AGPdata$date==daysAZ.seq[d]) ) {
+				AGPdata[i,]$time96 = sum(alltimecut<=AGPdata$dateandtime[i],na.rm=T)
+			}
+			CGMactive[dnum] = length(unique(AGPdata[which(AGPdata$date==daysAZ.seq[d]),]$time96))
+			names(CGMactive)[dnum] = as.character(daysAZ.seq[d])
+			dnum = dnum+1
+
+			if ( length(setdiff(c(1:96),AGPdata[which(AGPdata$date==daysAZ.seq[d]),]$time96))>0 ) {
+				addIdx.time = as.POSIXct(paste(daysAZ.seq[d],format(alltimecut[setdiff(c(1:96),AGPdata[which(AGPdata$date==daysAZ.seq[d]),]$time96)],'%H:%M:%S')),format='%Y-%m-%d %H:%M:%S',tz='GMT')
+				addline.tmp = AGPdata[1:length(addIdx.time),]
+
+				addline.tmp$dateandtime = addIdx.time
+				addline.tmp$date = as.Date(addline.tmp$dateandtime)
+				addline.tmp$time = NA
+				addline.tmp$sub = k #todo
+				addline.tmp$log = 1
+				addline.tmp$glucose = NA
+				addline.tmp$event_eat = NA 
+				addline.tmp$event_exercise = NA
+				addline.tmp$memo = NA
+				addline.tmp$time96 = setdiff(c(1:96),AGPdata[which(AGPdata$date==daysAZ.seq[d]),]$time96)
+
+				AGPdata = rbind(AGPdata,addline.tmp)
+			}
+		}
+	}
 	
-	if ( mod !=1 ) {
-		out.sub = c(1,2) # ver2.0 # //최대 2개 기간까지만 출력하도록 제한 ## 
-	} else {
-		out.sub = 1 
-	}
+	AGPdata = AGPdata[order(AGPdata$dateandtime),]
+	CGMactive = CGMactive[order(names(CGMactive))]
 
-	if ( any(AGPdata$sub==1,na.rm=T)==F ) {
-#		cat('[경고] 리브레 데이터 변환 완료하였으나, 분석기간에 해당되는 데이터가 없습니다.\n')
-		errCode.sub = c(errCode.sub, 'Warn_104')
-	}
+	### output =============================================================================##
+	mod = mod # 1:1개 기간 2:k개기간
 
-	return(list(AGPdata = AGPdata[which(AGPdata$sub%in%out.sub),], errCode.sub = errCode.sub, mod=mod))
+	return(list(AGPdata=AGPdata[which(AGPdata$sub<=maxmod),], CGMactive=CGMactive, errCode.sub=errCode.sub, mod=mod))
 
 
 }

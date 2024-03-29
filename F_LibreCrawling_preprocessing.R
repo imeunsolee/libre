@@ -20,7 +20,7 @@
 #[1] 2595    9
 
 
-LibreCrawling_preprocessing = function( data, FinalDate ) {
+LibreCrawling_preprocessing = function( data, FinalDate, maxmod ) {
 	errCode.sub = c()
 
 	### step0 =============================================================================##
@@ -202,7 +202,7 @@ LibreCrawling_preprocessing = function( data, FinalDate ) {
 	mod = mod # 1:1개 기간 2:k개기간
 
 	# 최대 14일까지 todo 
-	return(list(AGPdata=AGPdata, CGMactive=CGMactive, errCode.sub = errCode.sub, mod=mod))
+	return(list(AGPdata=AGPdata[which(AGPdata$sub<=maxmod),], CGMactive=CGMactive, errCode.sub = errCode.sub, mod=mod))
 
 }
 
