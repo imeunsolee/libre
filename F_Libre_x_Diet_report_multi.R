@@ -96,7 +96,7 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 		} else {
 			errCode = c(errCode,AGPdata$errCode.sub)
 			mod = AGPdata$mod
-			CGMactive = AGPdata$CGMactive #/96(%) #todo 
+			CGMactive = AGPdata$CGMactive/96*100#(%) #todo 
 	#		AGPdata = AGPdata$AGPdata[which(AGPdata$AGPdata$sub<=mod),]
 			AGPdata = AGPdata$AGPdata[!is.na(AGPdata$AGPdata$sub),]
 		}
@@ -124,7 +124,7 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 		} else {
 			errCode = c(errCode,AGPdata$errCode.sub)
 			mod = AGPdata$mod
-			CGMactive = AGPdata$CGMactive #/96(%) #todo 
+			CGMactive = AGPdata$CGMactive/96*100#(%) 
 #			AGPdata = AGPdata$AGPdata[which(AGPdata$AGPdata$sub<=mod),]
 			AGPdata = AGPdata$AGPdata[!is.na(AGPdata$AGPdata$sub),]
 		}
@@ -135,13 +135,13 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 	### step2 =============================================================================##
 	### 다이어트용 혈당스파이크 찾기
 	if ( method=='Spike' ) {
-		SPIKEdata.tmp = try(GlucoseSpike_onDIET(daysAZ=unique(AGPdata$date),data=AGPdata,baseGlu=NA,IncCut=IncCut),silent=T)
-		if ( class(SPIKEdata.tmp)=='try-error' ) {
+		spikeData = try(GlucoseSpike_onDIET(daysAZ=unique(AGPdata$date),data=AGPdata,baseGlu=NA,IncCut=IncCut),silent=T)
+		if ( class(spikeData)=='try-error' ) {
 			errCode = c(errCode,'21900')
 			break
 		} else {
-			errCode = c(errCode,SPIKEdata.tmp$errCode.sub)
-			AGPdata = SPIKEdata.tmp$data
+			errCode = c(errCode,spikeData$errCode.sub)
+			AGPdata = spikeData$data
 		}
 	}
 
@@ -149,14 +149,16 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 	### step3 =============================================================================##
 	### 일일혈당프로필
 	if ( method=='Spike' ) {
-		spikeStat = SPIKEdata.tmp$stat
+		## best day, worst day 선정
+		## day별 spikeN, peak, tir 
+		spikeStat = spikeData$stat
 		spikeStat$date_event = as.Date(spikeStat$time_event)
 		spikeStat = try(sqldf('select date_event, max(peak) as max_peak, count(peak) as count_peak from spikeStat group by date_event'),silent=T)
 		if ( class(spikeStat)=='try-error' ) {
 			errCode = c(errCode,'31900')
 		}
 		## 0 번 추가 ## 
-		add.tmp = as.Date(setdiff(unique(SPIKEdata.tmp$data$date),spikeStat$date_event),origin='1970-01-01')
+		add.tmp = as.Date(setdiff(unique(spikeData$data$date),spikeStat$date_event),origin='1970-01-01')
 		if ( length(add.tmp)>0 ) {
 			spikeStat = rbind(spikeStat,data.frame(date_event=add.tmp,max_peak=NA,count_peak=0))
 		}
@@ -167,6 +169,7 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 
 		spikeStat = spikeStat[which(spikeStat$date_event %in% AGPdata[which(AGPdata$sub==1),]$date),]
 
+		## worst day
 		cond1.w = which(spikeStat$count_peak==max(spikeStat$count_peak))
 		if ( all(spikeStat[cond1.w,]$count_peak==0) ) {
 			cond2.w = (spikeStat[cond1.w,]$max_glu > TBR_lev1.Cut)
@@ -178,21 +181,22 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 			worstday = spikeStat[cond3.w[which.max(spikeStat[cond3.w,]$max_peak)],]$date_event
 		}
 
+		## best day
 		# CGM 활성도가 Q1수준 또는 50% 이상인 날 중에 best
 		spikeStat$CGMactive = NA
 		spikeStat$CGMactive = CGMactive[match(as.character(spikeStat$date_event),names(CGMactive))]
 		CGMactive.cut = min(50,quantile(CGMactive,prob=0.25))
-		spikeStat = spikeStat[which(spikeStat$CGMactive>=CGMactive.cut),]
+		spikeStat1 = spikeStat[which(spikeStat$CGMactive>=CGMactive.cut),]
 
-		cond1.b = which(spikeStat$count_peak==min(spikeStat$count_peak))
-		if ( all(spikeStat[cond1.b,]$count_peak==0) ) {
-			cond2.b = (spikeStat[cond1.b,]$max_glu > TBR_lev1.Cut)
+		cond1.b = which(spikeStat1$count_peak==min(spikeStat1$count_peak))
+		if ( all(spikeStat1[cond1.b,]$count_peak==0) ) {
+			cond2.b = (spikeStat1[cond1.b,]$max_glu > TBR_lev1.Cut)
 			cond3.b = cond1.b[cond2.b]
-			bestday = spikeStat[cond3.b[which.min(spikeStat[cond3.b,]$max_glu)],]$date_event
+			bestday = spikeStat1[cond3.b[which.min(spikeStat1[cond3.b,]$max_glu)],]$date_event
 		} else {
-			cond2.b = (spikeStat[cond1.b,]$max_peak > TBR_lev1.Cut)
+			cond2.b = (spikeStat1[cond1.b,]$max_peak > TBR_lev1.Cut)
 			cond3.b = cond1.b[cond2.b]
-			bestday = spikeStat[cond3.b[which.min(spikeStat[cond3.b,]$max_peak)],]$date_event
+			bestday = spikeStat1[cond3.b[which.min(spikeStat1[cond3.b,]$max_peak)],]$date_event
 		}
 
 	} else {
@@ -201,7 +205,7 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 	}
 
 	### 일일혈당프로필 시각화
-	dailygp = try(dailyGP_onW(data=AGPdata[which(AGPdata$log==1 & AGPdata$sub==1),],bestday=bestday,worstday=worstday,TBR_lev1.Cut=TBR_lev1.Cut,TAR_lev1.Cut=TAR_lev1.Cut, method=method),silent=T)
+	dailygp = try(dailyGP_onW(data=AGPdata[which(AGPdata$log==1 & AGPdata$sub==1),],bestday=bestday,worstday=worstday,TBR_lev1.Cut=TBR_lev1.Cut,TAR_lev1.Cut=TAR_lev1.Cut, method=method,spikeStat=spikeStat),silent=T)
 	# 에러 확인용 ****************************************************************************
 	if ( class(dailygp)=='try-error' ) {
 		errCode = c(errCode,'32900')
@@ -255,7 +259,7 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 
 	### step4 =============================================================================##
 	### 식후혈당분석
-	dietplan.alltime = try(GlucosePattern_clustering_DIET(daysAZ=unique(AGPdata$date),data=AGPdata,mealtime=NA,spikeLog=SPIKEdata.tmp$stat,method=method,PPG.L=PPG.L,PPG.U=PPG.U,Target=Target,IncCut=IncCut),silent=T)
+	dietplan.alltime = try(GlucosePattern_clustering_DIET(daysAZ=unique(AGPdata$date),data=AGPdata,mealtime=NA,spikeLog=spikeData$stat,method=method,PPG.L=PPG.L,PPG.U=PPG.U,Target=Target,IncCut=IncCut),silent=T)
 	# 에러 확인용 ****************************************************************************
 	if ( class(dietplan.alltime)=='try-error' ) {
 		errCode = c(errCode,'41900')
@@ -263,7 +267,7 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 		errCode = c(errCode,dietplan.alltime$errCode.sub)
 	}
 
-	dietplan.alltime1 = try(GlucosePattern_clustering_DIET(daysAZ=unique(AGPdata[which(AGPdata$sub==1),]$date),data=AGPdata[which(AGPdata$sub==1),],mealtime=NA,spikeLog=SPIKEdata.tmp$stat,method=method,PPG.L=PPG.L,PPG.U=PPG.U,Target=Target,IncCut=IncCut),silent=T)
+	dietplan.alltime1 = try(GlucosePattern_clustering_DIET(daysAZ=unique(AGPdata[which(AGPdata$sub==1),]$date),data=AGPdata[which(AGPdata$sub==1),],mealtime=NA,spikeLog=spikeData$stat,method=method,PPG.L=PPG.L,PPG.U=PPG.U,Target=Target,IncCut=IncCut),silent=T)
 	# 에러 확인용 alltime1 ****************************************************************************
 	if ( class(dietplan.alltime1)=='try-error' ) {
 		errCode = c(errCode,'41900')
@@ -272,7 +276,7 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 	}
 	if ( mod>1 ) {
 
-		dietplan.alltime2 = try(GlucosePattern_clustering_DIET(daysAZ=unique(AGPdata[which(AGPdata$sub!=1),]$date),data=AGPdata[which(AGPdata$sub!=1),],mealtime=NA,spikeLog=SPIKEdata.tmp$stat,method=method,PPG.L=PPG.L,PPG.U=PPG.U,Target=Target,IncCut=IncCut),silent=T)
+		dietplan.alltime2 = try(GlucosePattern_clustering_DIET(daysAZ=unique(AGPdata[which(AGPdata$sub!=1),]$date),data=AGPdata[which(AGPdata$sub!=1),],mealtime=NA,spikeLog=spikeData$stat,method=method,PPG.L=PPG.L,PPG.U=PPG.U,Target=Target,IncCut=IncCut),silent=T)
 		# 에러 확인용 ****************************************************************************
 		if ( class(dietplan.alltime2)=='try-error' ) {
 			errCode = c(errCode,'41900')

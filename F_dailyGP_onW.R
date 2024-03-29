@@ -7,7 +7,7 @@
 ## . worstday
 ## ---------------------------------------
 
-dailyGP_onW = function( data, bestday, worstday, TBR_lev1.Cut, TAR_lev1.Cut, method ) {
+dailyGP_onW = function( data, bestday, worstday, TBR_lev1.Cut, TAR_lev1.Cut, method, spikeStat=spikeStat ) {
 
 	errCode.sub = c()
 
@@ -107,14 +107,18 @@ dailyGP_onW = function( data, bestday, worstday, TBR_lev1.Cut, TAR_lev1.Cut, met
 		}
         
         if ( any(wk.tmp%in%bestday) ) {
+			bestNum = spikeStat[which(spikeStat$date_event==bestday),]$count_peak
             out.Plot[[1]][[i]] = out.Plot[[1]][[i]] +
-                geom_rect(data=data.tmp,mapping=aes(xmin=as.POSIXct(paste(bestday,'00:00:00'),format='%Y-%m-%d %H:%M:%S',tz='GMT'),xmax=as.POSIXct(paste(bestday+1,'00:00:00'),format='%Y-%m-%d %H:%M:%S',tz='GMT'),ymin=0,ymax=ylim.tmp),color='#12c29c',size=3,alpha=0) + 
-                geom_label(aes(label='BEST',x=as.POSIXct(paste(bestday,'20:00:00'),format='%Y-%m-%d %H:%M:%S',tz='GMT'),y=ylim.tmp-30),size=6,family='NotoSansCJKkrB',fill='#12c29c',color='#FFFFFF',alpha=0.1)
+                geom_rect(data=data.tmp,mapping=aes(xmin=as.POSIXct(paste(bestday,'00:00:00'),format='%Y-%m-%d %H:%M:%S',tz='GMT'),xmax=as.POSIXct(paste(bestday+1,'00:00:00'),format='%Y-%m-%d %H:%M:%S',tz='GMT'),ymin=0,ymax=ylim.tmp),color='#12c29c',size=3,alpha=0)
+            out.Plot[[1]][[i]] = out.Plot[[1]][[i]] +
+                geom_label(aes(label=paste('BEST:',bestNum),x=as.POSIXct(paste(bestday,'18:30:00'),format='%Y-%m-%d %H:%M:%S',tz='GMT'),y=ylim.tmp-30),size=5,family='NotoSansCJKkrB',fill='#12c29c',color='#FFFFFF',alpha=0.02)
         }
         if ( any(wk.tmp%in%worstday) ) {
+			worstNum = spikeStat[which(spikeStat$date_event==worstday),]$count_peak
             out.Plot[[1]][[i]] = out.Plot[[1]][[i]] +
-                geom_rect(data=data.tmp,mapping=aes(xmin=as.POSIXct(paste(worstday,'00:00:00'),format='%Y-%m-%d %H:%M:%S',tz='GMT'),xmax=as.POSIXct(paste(worstday+1,'00:00:00'),format='%Y-%m-%d %H:%M:%S',tz='GMT'),ymin=0,ymax=ylim.tmp),color='#EF4559',size=3,alpha=0) + 
-                geom_label(aes(label='WORST',x=as.POSIXct(paste(worstday,'18:30:00'),format='%Y-%m-%d %H:%M:%S',tz='GMT'),y=ylim.tmp-30),size=6,family='NotoSansCJKkrB',fill='#EF4559',color='#FFFFFF',alpha=0.1)
+                geom_rect(data=data.tmp,mapping=aes(xmin=as.POSIXct(paste(worstday,'00:00:00'),format='%Y-%m-%d %H:%M:%S',tz='GMT'),xmax=as.POSIXct(paste(worstday+1,'00:00:00'),format='%Y-%m-%d %H:%M:%S',tz='GMT'),ymin=0,ymax=ylim.tmp),color='#EF4559',size=3,alpha=0)
+			out.Plot[[1]][[i]] = out.Plot[[1]][[i]] + 
+                geom_label(aes(label=paste('WORST:',worstNum),x=as.POSIXct(paste(worstday,'17:00:00'),format='%Y-%m-%d %H:%M:%S',tz='GMT'),y=ylim.tmp-30),size=5,family='NotoSansCJKkrB',fill='#EF4559',color='#FFFFFF',alpha=0.02)
         }
 
 	}
