@@ -8,7 +8,7 @@
 ## . IncCut : 상승폭기준 상승폭 
 ## ---------------------------------------
 
-GlucoseSpike_DIET3 = function( daysAZ, data, baseGlu, IncCut ) {
+GlucoseSpike_onDIET = function( daysAZ, data, baseGlu, IncCut ) {
 
     errCode.sub = c()
 
