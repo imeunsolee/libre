@@ -184,6 +184,13 @@ LibreCSV_preprocessing = function( inFileName1, FinalDate, maxmod ) {
 	data_type0to6 = merge(data_type0[,-c(1:3)],data_type1to6,by=c('dateandtime','date','time','sub','log','glucose'),all=T)
 	AGPdata = data.frame(data_type0to6[!is.na(data_type0to6$dateandtime),])
 	AGPdata$glucose = as.numeric(as.vector(AGPdata$glucose))
+	if ( sum(AGPdata$event_eat==1,na.rm=T)>0 && is.na(AGPdata[which(AGPdata$event_eat==1)[1],]$glucose) ) {
+		tmp1 = AGPdata[which(AGPdata$event_eat==1)[1],]$dateandtime-50*60
+		tmp2 = AGPdata[which(AGPdata$event_eat==1)[1],]$dateandtime+50*60
+		if ( all(is.na(AGPdata[which(AGPdata$dateandtime>=tmp1 & AGPdata$dateandtime<=tmp2),]$glucose)) ) {
+			AGPdata[which(AGPdata$event_eat==1)[1],]$event_eat = NA
+		}
+	}
 
 
 	## 3일미만 기간데이터 삭제 ## 
@@ -260,6 +267,9 @@ LibreCSV_preprocessing = function( inFileName1, FinalDate, maxmod ) {
 	### output =============================================================================##
 	mod = mod # 1:1개 기간 2:k개기간
 
+    ## remove duplicates on allrows
+    AGPdata = unique(AGPdata)
+	
 	return(list(AGPdata=AGPdata[which(AGPdata$sub<=maxmod),], CGMactive=CGMactive, errCode.sub=errCode.sub, mod=mod))
 
 
