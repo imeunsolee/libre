@@ -188,7 +188,7 @@ dietPlanTableHead.theme_forWeb = ttheme_minimal(
 		invalue = invalue[which(!is.na(invalue$z)),]
 		invalue$menu = ifelse(invalue$menu=='','기록 없음',invalue$menu)
 		invalue = try(invalue[order(invalue$z,decreasing=T),],silent=T)
-		fontcol = ifelse(invalue$z>=100,'#FF4E4E',ifelse(invalue$z>=60,'#FF922E',ifelse(invalue$z>=30,'#ffc908',NA)))
+		fontcol = ifelse(invalue$z>=100,'#FF4E4E',ifelse(invalue$z>=60,'#FF922E',ifelse(invalue$z>=30,'#ffc908','#122747')))
 		dietPlanTableBody.theme_forWeb$core$fg_params$col = cbind(rep('#122747',dim(invalue)[1]),rep('#122747',dim(invalue)[1]),rep('#122747',dim(invalue)[1]),rep('#122747',dim(invalue)[1]),fontcol,rep('#122747',dim(invalue)[1]))
 		if ( is.numeric(invalue$z) ) invalue$z = paste('▲',invalue$z,sep=' ')
 
