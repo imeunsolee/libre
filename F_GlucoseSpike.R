@@ -227,7 +227,11 @@ GlucoseSpike = function( daysAZ, data, baseGlu, IncCut ) {
             if ( time_tmp1==time_tmp2 ) {
                 next
             }
-            data[which(data$dateandtime>=time_tmp1 & data$dateandtime<time_tmp2),]$SpikeIdx = e 
+            data[which(data$dateandtime>=time_tmp1 & data$dateandtime<time_tmp2),]$SpikeIdx = e
+            # 동일한 spikeIdx 내의 중복되는 event_eat 은 삭제 
+            if ( sum(!is.na(data_tmp[which(data_tmp$dateandtime>=time_tmp1 & data_tmp$dateandtime<time_tmp2),]$event_eat))>1 ) {
+                data_tmp[which(data_tmp$dateandtime>=time_tmp1 & data_tmp$dateandtime<time_tmp2),]$event_eat[which(!is.na(data_tmp[which(data_tmp$dateandtime>=time_tmp1 & data_tmp$dateandtime<time_tmp2),]$event_eat))[-1]]=NA
+            }
         }
         data$event_spike = statE[match(data$dateandtime,statE$time_event),]$SpikeIdx
     }
