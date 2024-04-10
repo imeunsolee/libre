@@ -75,7 +75,14 @@ GlucoseSpike = function( daysAZ, data, baseGlu, IncCut ) {
         # e2 = max(which(data_tmp[1:max(which(data_tmp$dateandtime<=(data_tmp$dateandtime[e]+15*60))),]$turnPt==1 & data_tmp[1:max(which(data_tmp$dateandtime<=(data_tmp$dateandtime[e]+15*60))),]$turnSign<=0))
         e2 = which(data_tmp$dateandtime>=(data_tmp$dateandtime[e]-2*60*60) & data_tmp$dateandtime<=(data_tmp$dateandtime[e]+15*60))[max(which(data_tmp[which(data_tmp$dateandtime>=(data_tmp$dateandtime[e]-2*60*60) & data_tmp$dateandtime<=(data_tmp$dateandtime[e]+15*60)),]$turnPt==1 & data_tmp[which(data_tmp$dateandtime>=(data_tmp$dateandtime[e]-2*60*60) & data_tmp$dateandtime<=(data_tmp$dateandtime[e]+15*60)),]$turnSign<=0))]
         if ( is.na(e2) ) {
-            next
+            if ( is.na(data_tmp$glucose[e]) ) {
+                ## 가까운 시간에 혈당 값이 있는 곳으로 이동시키기 ##
+                e2.tmp = which.min(data_tmp[which(data_tmp$dateandtime>=(data_tmp$dateandtime[e]-10*60)&data_tmp$dateandtime<=(data_tmp$dateandtime[e]+10*60)),]$glucose)
+                e2 = which(data_tmp$dateandtime>=(data_tmp$dateandtime[e]-10*60)&data_tmp$dateandtime<=(data_tmp$dateandtime[e]+10*60))[e2.tmp]
+            }
+            if ( is.na(e2) ) {
+                next
+            }
         } else if ( !is.na(e2) && e2=='-Inf' ) {
             e1 = which(data_tmp$dateandtime>=data_tmp$dateandtime[e]-2*60*60)[1]
             e2 = c(e1:e)[which(data_tmp[e1:max(which(data_tmp$dateandtime<=(data_tmp$dateandtime[e]+15*60))),]$glucose == min(data_tmp[e1:max(which(data_tmp$dateandtime<=(data_tmp$dateandtime[e]+15*60))),]$glucose,na.rm=T))]
@@ -179,6 +186,9 @@ GlucoseSpike = function( daysAZ, data, baseGlu, IncCut ) {
             
             } else if ( !is.na(s1) ) {
                 s1.idx = max(which(data_tmp[1:min(which(data_tmp$SpikeIdx==e)),]$turnPt==1 & data_tmp[1:min(which(data_tmp$SpikeIdx==e)),]$turnSign<=0))
+                if ( any(data_tmp[which(data_tmp$dateandtime>=(data_tmp$dateandtime[s1.idx]-15*60)&data_tmp$dateandtime<=(data_tmp$dateandtime[s1.idx])),]$event_eat==1,na.rm=T) ) {
+                    s1.idx = which(data_tmp$dateandtime>=(data_tmp$dateandtime[s1.idx]-15*60)&data_tmp$dateandtime<=(data_tmp$dateandtime[s1.idx]))[which(data_tmp[which(data_tmp$dateandtime>=(data_tmp$dateandtime[s1.idx]-15*60)&data_tmp$dateandtime<=(data_tmp$dateandtime[s1.idx])),]$event_eat==1)]
+                }
                 time.event1 = data_tmp$dateandtime[s1.idx]
             } 
 
