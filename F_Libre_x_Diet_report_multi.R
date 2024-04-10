@@ -135,7 +135,7 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 	### step2 =============================================================================##
 	### 다이어트용 혈당스파이크 찾기
 	if ( method=='Spike' ) {
-		spikeData = try(GlucoseSpike_onDIET(daysAZ=unique(AGPdata$date),data=AGPdata,baseGlu=NA,IncCut=IncCut),silent=T)
+		spikeData = try(GlucoseSpike(daysAZ=unique(AGPdata$date),data=AGPdata,baseGlu=NA,IncCut=IncCut),silent=T)
 		if ( class(spikeData)=='try-error' ) {
 			errCode = c(errCode,'21900')
 			break
@@ -259,15 +259,15 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 
 	### step4 =============================================================================##
 	### 식후혈당분석
-	dietplan.alltime = try(GlucosePattern_clustering_DIET(daysAZ=unique(AGPdata$date),data=AGPdata,mealtime=NA,spikeLog=spikeData$stat,method=method,PPG.L=PPG.L,PPG.U=PPG.U,Target=Target,IncCut=IncCut),silent=T)
-	# 에러 확인용 ****************************************************************************
-	if ( class(dietplan.alltime)=='try-error' ) {
-		errCode = c(errCode,'41900')
-	} else {
-		errCode = c(errCode,dietplan.alltime$errCode.sub)
-	}
+	# dietplan.alltime = try(GlucosePattern_clustering_DIET(daysAZ=unique(AGPdata$date),data=AGPdata,mealtime=NA,spikeLog=spikeData$stat,method=method,PPG.L=PPG.L,PPG.U=PPG.U,Target=Target,IncCut=IncCut),silent=T)
+	# # 에러 확인용 ****************************************************************************
+	# if ( class(dietplan.alltime)=='try-error' ) {
+	# 	errCode = c(errCode,'41900')
+	# } else {
+	# 	errCode = c(errCode,dietplan.alltime$errCode.sub)
+	# }
 
-	dietplan.alltime1 = try(GlucosePattern_clustering_DIET(daysAZ=unique(AGPdata[which(AGPdata$sub==1),]$date),data=AGPdata[which(AGPdata$sub==1),],mealtime=NA,spikeLog=spikeData$stat,method=method,PPG.L=PPG.L,PPG.U=PPG.U,Target=Target,IncCut=IncCut),silent=T)
+	dietplan.alltime1 = try(GlucosePattern_clustering_DIET(daysAZ=unique(AGPdata[which(AGPdata$sub==1),]$date),data=AGPdata[which(AGPdata$sub==1),],mealtime=NA,spikeLog=spikeData$stat,baseGlu=spikeData$baseGlu,method=method,PPG.L=PPG.L,PPG.U=PPG.U,Target=Target,IncCut=IncCut),silent=T)
 	# 에러 확인용 alltime1 ****************************************************************************
 	if ( class(dietplan.alltime1)=='try-error' ) {
 		errCode = c(errCode,'41900')
@@ -276,7 +276,7 @@ Libre_x_Diet_report_multi = function( Target='DIET', StartDate, EndDate, inFileN
 	}
 	if ( mod>1 ) {
 
-		dietplan.alltime2 = try(GlucosePattern_clustering_DIET(daysAZ=unique(AGPdata[which(AGPdata$sub!=1),]$date),data=AGPdata[which(AGPdata$sub!=1),],mealtime=NA,spikeLog=spikeData$stat,method=method,PPG.L=PPG.L,PPG.U=PPG.U,Target=Target,IncCut=IncCut),silent=T)
+		dietplan.alltime2 = try(GlucosePattern_clustering_DIET(daysAZ=unique(AGPdata[which(AGPdata$sub!=1),]$date),data=AGPdata[which(AGPdata$sub!=1),],mealtime=NA,spikeLog=spikeData$stat,baseGlu=spikeData$baseGlu,method=method,PPG.L=PPG.L,PPG.U=PPG.U,Target=Target,IncCut=IncCut),silent=T)
 		# 에러 확인용 ****************************************************************************
 		if ( class(dietplan.alltime2)=='try-error' ) {
 			errCode = c(errCode,'41900')
