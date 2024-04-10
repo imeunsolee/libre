@@ -53,7 +53,10 @@ GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, bas
 		# 	}
 		# }
 		time.start[[i]] = time.event[[i]] - (1*60*60)
-		time.end[[i]] = time.event[[i]] + (3*60*60)
+		time.end[[i]] = time.event[[i]] + (2*60*60)
+		for ( j in 1:length(time.event[[i]]) ) {
+			time.end[[i]][j] = max(time.end[[i]][j],spikeLog[which(spikeLog$time_event==time.event[[i]][j]),]$bpSpike_end)
+		}
 	}
 
 
