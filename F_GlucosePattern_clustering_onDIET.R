@@ -131,10 +131,10 @@ GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, bas
 			}
 
 			## 식전대비식후 혈당상승 평균 ---
-			glucose.inc = spikeLog[which(spikeLog$time_event==time.event[[i]][j]),]$peak - data[which(data$dateandtime==time.event[[i]][j]),]$glucose #식전혈당기준 
-			# glucose.inc = spikeLog[which(spikeLog$time_event==time.event[[i]][j]),]$peak - round(baseGlu[names(baseGlu)==daysAZ[i]],0) #base혈당기준
+			# glucose.inc = spikeLog[which(spikeLog$time_event==time.event[[i]][j]),]$peak - min(glucose.bef[which(glucose.bef$event==time.event[[i]][j] & glucose.bef$bef.x3==1),]$glucose,data[which(data$dateandtime==time.event[[i]][j]),]$glucose,na.rm=T) #식전혈당기준 
+			glucose.inc = spikeLog[which(spikeLog$time_event==time.event[[i]][j]),]$peak - round(baseGlu[names(baseGlu)==daysAZ[i]],0) #base혈당기준
 			if ( length(glucose.inc)==0 ) {
-				glucose.inc = glucose.aft[which(glucose.aft$event==time.event[[i]][j] & glucose.aft$aft.x3==1),]$glucose - data[which(data$dateandtime==time.event[[i]][j]),]$glucose #식전혈당기준
+				glucose.inc = glucose.aft[which(glucose.aft$event==time.event[[i]][j] & glucose.aft$aft.x3==1),]$glucose - min(glucose.bef[which(glucose.bef$event==time.event[[i]][j] & glucose.bef$bef.x3==1),]$glucose,data[which(data$dateandtime==time.event[[i]][j]),]$glucose,na.rm=T) #식전혈당기준
 				# glucose.inc = glucose.aft[which(glucose.aft$event==time.event[[i]][j] & glucose.aft$aft.x3==1),]$glucose - round(baseGlu[names(baseGlu)==daysAZ[i]],0) #base혈당기준
 			}
 			avgIncValue[[i]][j] = glucose.inc
