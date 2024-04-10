@@ -4,7 +4,7 @@
 ## ---------------------------------------
 ## ---------------------------------------
 
-GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, method=method, PPG.L=PPG.L, PPG.U=PPG.U, Target=Target, IncCut=IncCut ) {
+GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, baseGlu, method=method, PPG.L=PPG.L, PPG.U=PPG.U, Target=Target, IncCut=IncCut ) {
 
 	time.event=list(.POSIXct(NA,tz='GMT',cl='POSIXct'))
 	time.start=list(.POSIXct(NA,tz='GMT',cl='POSIXct'))
@@ -25,25 +25,33 @@ GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, met
     if ( !is.na(mealtime) ) {
         data = data[which(data$timeCut2==mealtime),]
     }
-	data$event = as.numeric(data$event_spike>0)
+	data$event = ifelse(data$event_eat==1|data$event_spike>0,1,NA) # spike or not
 
 	for ( i in 1:length(daysAZ) ) {
 
 		## 이벤트시간
 		time.event[[i]] = data[which(data$date==daysAZ[i] & data$event==1),]$dateandtime
 
-		# 조건. time.event  사이 간격이 3시간보다 작으면, 하나의 식사로 간주 ##
-		if ( length(time.event[[i]])>1 ) {
-			rm.event=c()
-			for(j in 1:(length(time.event[[i]])-1)){
-				if(as.numeric(difftime(time.event[[i]][j+1],time.event[[i]][j],unit='hours'))<3){
-					rm.event = c(rm.event,j+1)
-				}
-			}
-			if(!is.null(rm.event)){
-				time.event[[i]] = time.event[[i]][-rm.event]
+		# 조건. time.event  사이 간격이 2시간보다 작으면, 하나의 식사로 간주 ##
+		num = 1 
+		while ( num<length(time.event[[i]]) ) {
+			if ( as.numeric(difftime(time.event[[i]][num+1],time.event[[i]][num],unit='hours')) < 2 ) {
+				time.event[[i]] = time.event[[i]][-(num+1)]
+			} else {
+				num = num+1
 			}
 		}
+		# if ( length(time.event[[i]])>1 ) {
+		# 	rm.event=c()
+		# 	for ( j in 1:(length(time.event[[i]])-1) ) {
+		# 		if ( as.numeric(difftime(time.event[[i]][j+1],time.event[[i]][j],unit='hours'))<2 ) { # 2시간 텀 식사는 하나의 식사로 간주 # 
+		# 			rm.event = c(rm.event,j+1)
+		# 		}
+		# 	}
+		# 	if(!is.null(rm.event)){
+		# 		time.event[[i]] = time.event[[i]][-rm.event]
+		# 	}
+		# }
 		time.start[[i]] = time.event[[i]] - (1*60*60)
 		time.end[[i]] = time.event[[i]] + (3*60*60)
 	}
@@ -60,6 +68,7 @@ GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, met
 	spikeandcrash = vector('list',length(daysAZ))
 	overallspike = vector('list',length(daysAZ))
 	memo = vector('list',length(daysAZ))
+	spikeNo = vector('list',length(daysAZ))
 
 	for ( i in 1:length(daysAZ) ) {
 
@@ -78,9 +87,10 @@ GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, met
 			bef.x3 = rep(0,length(bef.x2)); bef.x3[which.max(bef.x1$dateandtime)]=1 # 식전 마지막 혈당
 			bef.x4 = j
 			bef.x5 = NA
+			event = time.event[[i]][j]
 
 			if ( dim(bef.x1)[1]!=0 ) {
-				glucose.bef = rbind(glucose.bef,cbind(bef.x1,bef.x2,bef.x3,bef.x4,bef.x5,time.event[[i]][j]))
+				glucose.bef = rbind(glucose.bef,cbind(bef.x1,bef.x2,bef.x3,bef.x4,bef.x5,event))
 
 			} else if ( dim(bef.x1)[1]==0 ) { # 식사기록 후 식후혈당 측정 없음
 				errCode.sub = c(errCode.sub, 'Warn_004')
@@ -100,10 +110,10 @@ GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, met
 			aft.x3 = rep(0,length(aft.x2)); aft.x3[which.max(aft.x1$glucose)]=1 # 식후 최고 혈당
 			aft.x4 = j
 			aft.x5 = rep(0,length(aft.x2)); aft.x5[which.min(aft.x1$glucose)]=1 # 식후 최저 혈당
-
+			event = time.event[[i]][j]
 
 			if ( dim(aft.x1)[1]!=0 ) {
-				glucose.aft = rbind(glucose.aft,cbind(aft.x1,aft.x2,aft.x3,aft.x4,aft.x5,time.event[[i]][j]))
+				glucose.aft = rbind(glucose.aft,cbind(aft.x1,aft.x2,aft.x3,aft.x4,aft.x5,event))
 
 			} else if ( dim(aft.x1)[1]==0 ) { # 식사기록 후 식후혈당 측정 없음
 				errCode.sub = c(errCode.sub, 'Warn_004')
@@ -118,9 +128,17 @@ GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, met
 			}
 
 			## 식전대비식후 혈당상승 평균 ---
-#			glucose.inc = (aft.x1$glucose[as.logical(aft.x3)]-min(bef.x1$glucose[as.logical(bef.x3)],aft.x1$glucose[1],na.rm=T))
-			glucose.inc = spikeLog[which(spikeLog$time_event==time.event[[i]][j]),]$peak - data[which(data$dateandtime==time.event[[i]][j]),]$glucose
+			glucose.inc = spikeLog[which(spikeLog$time_event==time.event[[i]][j]),]$peak - data[which(data$dateandtime==time.event[[i]][j]),]$glucose #식전혈당기준 
+			# glucose.inc = spikeLog[which(spikeLog$time_event==time.event[[i]][j]),]$peak - round(baseGlu[names(baseGlu)==daysAZ[i]],0) #base혈당기준
+			if ( length(glucose.inc)==0 ) {
+				glucose.inc = glucose.aft[which(glucose.aft$event==time.event[[i]][j] & glucose.aft$aft.x3==1),]$glucose - data[which(data$dateandtime==time.event[[i]][j]),]$glucose #식전혈당기준
+				# glucose.inc = glucose.aft[which(glucose.aft$event==time.event[[i]][j] & glucose.aft$aft.x3==1),]$glucose - round(baseGlu[names(baseGlu)==daysAZ[i]],0) #base혈당기준
+			}
 			avgIncValue[[i]][j] = glucose.inc
+			# if ( is.null(avgIncValue[[i]][j]) ) {
+			# 	glucose.inc = glucose.aft[which(glucose.aft$event==time.event[[i]][j] & glucose.aft$aft.x3==1),]$glucose - data[which(data$dateandtime==time.event[[i]][j]),]$glucose
+			# 	avgIncValue[[i]][j] = glucose.inc
+			# }
 
 			## 식전대비식후 혈당상승 속도 ---
 			time.inc = (aft.x2[as.logical(aft.x3)]-bef.x2[as.logical(bef.x3)])
@@ -132,9 +150,14 @@ GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, met
 			# 3: 급격히(30분이내 90mgdL이상, 1분이내 3mgdL이상)
 
 			## 식사메모
-				spikeNo = data[which(data$dateandtime==time.event[[i]][j]),]$SpikeIdx[1]
-                memo[[i]][j] = as.character(spikeLog[which(spikeLog$SpikeIdx==spikeNo),'memoCol'])
-				if ( is.na(memo[[i]][j]) ) memo[[i]][j] = ''
+			spikeNo[[i]][j] = data[which(data$dateandtime==time.event[[i]][j]),]$SpikeIdx[1]
+			if ( !is.na(spikeNo[[i]][j]) ) {
+				memo[[i]][j] = as.character(spikeLog[which(spikeLog$SpikeIdx==spikeNo[[i]][j]),'memoCol'])
+			} else {
+				memo_tmp = glucose.aft[which(glucose.aft$event==time.event[[i]][j] & glucose.aft$aft.x2<=120),]$memo
+				memo[[i]][j] = paste(unique(memo_tmp[!is.na(memo_tmp)]),collapse=';')
+			}
+			if ( is.na(memo[[i]][j]) ) memo[[i]][j] = ''
 
             #    memo[[i]][j] = as.character(spikeLog[which(spikeLog$SpikeIdx%in%spikeNo & !is.na(spikeLog$memoCol)),'memoCol'])
 
@@ -190,6 +213,7 @@ GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, met
 	time.event2 = as.POSIXct(unlist(time.event),origin='1970-01-01',tz='GMT')
 	avgIncValue2 = unlist(avgIncValue)
 	memo2 = unlist(memo)
+	spikeNo2 = unlist(spikeNo)
 
 	## 조건
 	cont1a = !is.na(peakValue2) & peakValue2<=PPG.U
@@ -200,6 +224,7 @@ GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, met
 	cont3b = as.logical(spikeandcrash2)
 	cont4a = !is.na(avgIncValue2) & avgIncValue2<=IncCut
 	cont4b = !is.na(avgIncValue2) & avgIncValue2>IncCut
+	cont5 = !is.na(spikeNo2)
 
 	## 패턴분류
 	# method = 'IncValue' # temp 20230925 #todo 
@@ -208,7 +233,7 @@ GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, met
 	ptrn3 = cont4b & cont2b & cont3a
 	ptrn4 = cont4b & cont2a & cont3b
 #	ptrn1 = ptrn2 = ptrn3 = ptrn4 = is.na(time.event2)
-	ptrn5 = !is.na(time.event2)
+	ptrn5 = cont5
 	
 	## 메모
 	out_value1 = data.frame(x=format(time.event2[which(ptrn1)],format='%m월%d일,%H시'),y=memo2[which(ptrn1)],z=avgIncValue2[which(ptrn1)],k=time.event2[which(ptrn1)],p=peakValue2[which(ptrn1)])
@@ -220,7 +245,7 @@ GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, met
 	out_value4 = data.frame(x=format(time.event2[which(ptrn4)],format='%m월%d일,%H시'),y=memo2[which(ptrn4)],z=avgIncValue2[which(ptrn4)],k=time.event2[which(ptrn4)],p=peakValue2[which(ptrn4)])
 
 	out_value5 = data.frame(x=format(time.event2[which(ptrn5)],format='%m월%d일,%H시'),y=memo2[which(ptrn5)],z=avgIncValue2[which(ptrn5)],k=time.event2[which(ptrn5)],p=peakValue2[which(ptrn5)])
-	out_value5 = out_value5[which(out_value5$z>=30),] #실제30이상 상승폭 가진 경우만 
+	# out_value5 = out_value5[which(out_value5$z>=30),] #실제30이상 상승폭 가진 경우만 
 
 
 	### step4 =============================================================================## 
