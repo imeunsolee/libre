@@ -201,6 +201,9 @@ LibreCrawling_preprocessing = function( data, FinalDate, maxmod ) {
 	### output =============================================================================##
 	mod = mod # 1:1개 기간 2:k개기간
 
+    ## remove duplicates on allrows
+    AGPdata = unique(AGPdata)
+
 	# 최대 14일까지 todo 
 	return(list(AGPdata=AGPdata[which(AGPdata$sub<=maxmod),], CGMactive=CGMactive, errCode.sub = errCode.sub, mod=mod))
 
