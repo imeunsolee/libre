@@ -198,7 +198,7 @@ LibreCSV_preprocessing = function( inFileName1, FinalDate, maxmod ) {
 	
 	if ( any(mod.ndays>=3) ) {
 		## 
-		RM.Sub = as.numeric(names(which(mod.ndays<1)))
+		RM.Sub = as.numeric(names(which(mod.ndays<2)))
 		AGPdata$sub[which(AGPdata$sub%in%RM.Sub)] = NA
 		NEW.Sub = unique(AGPdata$sub[!is.na(AGPdata$sub)])
 
@@ -217,6 +217,11 @@ LibreCSV_preprocessing = function( inFileName1, FinalDate, maxmod ) {
 		AGPdata$sub = NA 
 	#	errCode.sub = c(errCode.sub,'ERR')
 
+	}
+	## maxmod=1, then
+	if ( maxmod==1 ) {
+		AGPdata = AGPdata[which(AGPdata$sub==1),]
+		mod = 1 
 	}
 
 
