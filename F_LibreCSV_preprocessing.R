@@ -196,7 +196,7 @@ LibreCSV_preprocessing = function( inFileName1, FinalDate, maxmod ) {
 	## 3일미만 기간데이터 삭제 ## 
 	mod.ndays = tapply(AGPdata$date,AGPdata$sub,function(x){length(c(min(x,na.rm=T):max(x,na.rm=T)))})
 	
-	if ( any(mod.ndays>=1) ) {
+	if ( any(mod.ndays>=3) ) {
 		## 
 		RM.Sub = as.numeric(names(which(mod.ndays<1)))
 		AGPdata$sub[which(AGPdata$sub%in%RM.Sub)] = NA
