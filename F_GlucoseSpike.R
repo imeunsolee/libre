@@ -23,7 +23,10 @@ GlucoseSpike = function( daysAZ, data, baseGlu, IncCut ) {
         span.v = 0.05
         while(1) {
             # fit.tmp = loess(max_glucose ~ x, data=data_tmp[which(data_tmp$date==daysAZ[d]),],span=span.v,control=loess.control(surface='interpolate'))
-            fit.tmp = loess(glucose ~ x, data=data_log1[which(data_log1$date==daysAZ[d]),],span=span.v,control=loess.control(surface='interpolate'))
+            fit.tmp = try(loess(glucose ~ x, data=data_log1[which(data_log1$date==daysAZ[d]),],span=span.v,control=loess.control(surface='interpolate')),silent=T)
+            if ( class(fit.tmp)=='try-error' ) {
+                break
+            }
             pred.tmp = try(predict(fit.tmp,data_log1[which(data_log1$date==daysAZ[d]),]$x),silent=T)
             if ( class(pred.tmp)!='try-error' ) {
                 break
@@ -33,6 +36,9 @@ GlucoseSpike = function( daysAZ, data, baseGlu, IncCut ) {
                 #errcode
                 break
             }
+        }
+        if ( class(fit.tmp)=='try-error' ) {
+            next
         }
         data_log1$turnPt[setdiff(data_log1$x[c(FALSE,diff(diff(predict(fit.tmp,data_log1$x))>0)!=0)],NA)] = 1
         tmp1 = which(data_log1$date==daysAZ[d])[1]
