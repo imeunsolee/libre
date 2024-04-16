@@ -86,7 +86,7 @@ GlucoseSpike = function( daysAZ, data, baseGlu, IncCut ) {
                 e2.tmp = which.min(data_tmp[which(data_tmp$dateandtime>=(data_tmp$dateandtime[e]-10*60)&data_tmp$dateandtime<=(data_tmp$dateandtime[e]+10*60)),]$glucose)
                 e2 = which(data_tmp$dateandtime>=(data_tmp$dateandtime[e]-10*60)&data_tmp$dateandtime<=(data_tmp$dateandtime[e]+10*60))[e2.tmp]
             }
-            if ( is.na(e2) ) {
+            if ( is.na(e2) || length(e2)==0 ) {
                 next
             }
         } else if ( !is.na(e2) && e2=='-Inf' ) {
