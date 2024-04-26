@@ -46,10 +46,10 @@ GlucoseSpike = function( daysAZ, data, baseGlu, IncCut ) {
         if ( d>1 && (daysAZ[d]-1 == daysAZ[d-1]) ) {
             tmp1 = max(which(data_log1$date==daysAZ[d-1] & data_log1$turnPt==1))
         }
-        if ( which.min(data_log1[tmp1:tmp2,]$glucose)!=1 && which.min(data_log1[tmp1:tmp2,]$glucose!=length(tmp1:tmp2)) ) {
+        if ( tmp1!='-Inf' && which.min(data_log1[tmp1:tmp2,]$glucose)!=1 && which.min(data_log1[tmp1:tmp2,]$glucose!=length(tmp1:tmp2)) ) {
             data_log1[c(tmp1:tmp2)[which.min(data_log1[tmp1:tmp2,]$glucose)],]$turnPt = 1
         }
-        if ( which.max(data_log1[tmp1:tmp2,]$glucose)!=1 && which.max(data_log1[tmp1:tmp2,]$glucose)!=length(tmp1:tmp2) ) {
+        if ( tmp1!='-Inf' && which.max(data_log1[tmp1:tmp2,]$glucose)!=1 && which.max(data_log1[tmp1:tmp2,]$glucose)!=length(tmp1:tmp2) ) {
             data_log1[c(tmp1:tmp2)[which.max(data_log1[tmp1:tmp2,]$glucose)],]$turnPt = 1
         }
 
