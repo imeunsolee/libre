@@ -79,7 +79,7 @@ GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, bas
 
 		for ( j in 1:length(time.event[[i]]) ) {
 
-			if ( time.event[[i]][j]==max(data$dateandtime) ) { # 식사기록 후 식후혈당 측정 없음
+			if ( time.event[[i]][j]>=max(data[!is.na(data$glucose),]$dateandtime) ) { # 식사기록 후 식후혈당 측정 없음
 				errCode.sub = c(errCode.sub, 'Warn_004')
 				next
 			}
@@ -248,7 +248,7 @@ GlucosePattern_clustering_DIET = function( daysAZ, data, mealtime, spikeLog, bas
 	out_value4 = data.frame(x=format(time.event2[which(ptrn4)],format='%m월%d일,%H시'),y=memo2[which(ptrn4)],z=avgIncValue2[which(ptrn4)],k=time.event2[which(ptrn4)],p=peakValue2[which(ptrn4)])
 
 	out_value5 = data.frame(x=format(time.event2[which(ptrn5)],format='%m월%d일,%H시'),y=memo2[which(ptrn5)],z=avgIncValue2[which(ptrn5)],k=time.event2[which(ptrn5)],p=peakValue2[which(ptrn5)])
-	# out_value5 = out_value5[which(out_value5$z>=30),] #실제30이상 상승폭 가진 경우만 
+	out_value5 = out_value5[which(out_value5$z>=30),] #실제30이상 상승폭 가진 경우만 
 
 
 	### step4 =============================================================================## 
